@@ -35,3 +35,25 @@ ssh-tunnel -i ~/.ssh/mykey user@server -- 3000 5432
 ```bash
 alias ssh-tunnel='~/scripts/ssh-tunnel.sh'
 ```
+
+### claude-cron.sh
+
+`claude -p "Hi. Reply with OK only." --model haiku` 를 매일 정해진 시각(KST)에 실행하는 cron 배치를 켜고 끄는 스크립트. 서버 타임존이 달라도 KST 기준으로 변환해서 등록합니다.
+
+**사용법:**
+
+```bash
+claude-cron on [HH:MM]   # cron 등록 (기본: 07:00 KST, 다시 실행하면 시각 변경)
+claude-cron off          # cron 해제
+claude-cron status       # 등록 현황 + 최근 실행 로그
+claude-cron run          # 지금 한 번 실행 (cron이 호출하는 명령)
+claude-cron --help
+```
+
+로그: `~/.local/state/claude-cron/claude-cron.log`
+
+**alias 설정:**
+
+```bash
+alias claude-cron='~/scripts/claude-cron.sh'
+```
