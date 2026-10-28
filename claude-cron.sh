@@ -4,7 +4,7 @@ set -e
 
 PROMPT="Hi. Reply with OK only."
 MODEL="haiku"
-DEFAULT_TIME="07:00" # KST
+DEFAULT_TIMES=("06:00" "11:05") # KST
 MARKER="# claude-cron"
 SCRIPT="$(readlink -f "$0")"
 LOG_FILE="$HOME/.local/state/claude-cron/claude-cron.log"
@@ -16,7 +16,8 @@ Usage: $(basename "$0") <command>
 Run 'claude -p "$PROMPT" --model $MODEL' every day via cron.
 
 Commands:
-  on [HH:MM]   Register the cron job at HH:MM KST (default: $DEFAULT_TIME)
+  on [HH:MM ...]
+               Register daily cron jobs at the given KST times (default: ${DEFAULT_TIMES[*]})
                Running it again replaces the existing schedule.
   off          Remove the cron job
   status       Show the cron job and recent log
@@ -24,8 +25,9 @@ Commands:
   -h, --help   Show this help
 
 Examples:
-  $(basename "$0") on          # every day at 07:00 KST
+  $(basename "$0") on          # every day at 06:00 and 11:05 KST
   $(basename "$0") on 06:30    # every day at 06:30 KST
+  $(basename "$0") on 06:00 11:05
   $(basename "$0") off
 
 Log: $LOG_FILE
@@ -37,23 +39,30 @@ current_entry() {
 }
 
 cmd_on() {
-  local kst="${1:-$DEFAULT_TIME}"
-  if [[ ! "$kst" =~ ^([01]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
-    echo -e "\033[31mError: invalid time '$kst' (expected HH:MM)\033[0m"
-    exit 1
+  local times=("$@")
+  if [ "${#times[@]}" -eq 0 ]; then
+    times=("${DEFAULT_TIMES[@]}")
   fi
+  local kst
+  for kst in "${times[@]}"; do
+    if [[ ! "$kst" =~ ^([01]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+      echo -e "\033[31mError: invalid time '$kst' (expected HH:MM)\033[0m"
+      exit 1
+    fi
+  done
 
   # 👉 cron은 서버 타임존 기준이므로 KST 시각을 서버 시각으로 변환
   local min hour
-  read -r min hour < <(date -d "TZ=\"Asia/Seoul\" $kst" '+%-M %-H')
-  local server_time
-  server_time="$(date -d "TZ=\"Asia/Seoul\" $kst" '+%H:%M %Z')"
+  local lines=()
+  for kst in "${times[@]}"; do
+    read -r min hour < <(date -d "TZ=\"Asia/Seoul\" $kst" '+%-M %-H')
+    lines+=("$min $hour * * * /bin/bash \"$SCRIPT\" run >> \"$LOG_FILE\" 2>&1 $MARKER KST=$kst")
+  done
 
   mkdir -p "$(dirname "$LOG_FILE")"
-  local line="$min $hour * * * /bin/bash \"$SCRIPT\" run >> \"$LOG_FILE\" 2>&1 $MARKER KST=$kst"
-  { crontab -l 2>/dev/null | grep -vF "$MARKER" || true; echo "$line"; } | crontab -
+  { crontab -l 2>/dev/null | grep -vF "$MARKER" || true; printf '%s\n' "${lines[@]}"; } | crontab -
 
-  echo -e "\033[32mEnabled: every day at $kst KST (server: $server_time)\033[0m"
+  echo -e "\033[32mEnabled: every day at ${times[*]} KST\033[0m"
 }
 
 cmd_off() {
@@ -69,8 +78,10 @@ cmd_status() {
   local entry
   entry="$(current_entry)"
   if [ -n "$entry" ]; then
-    echo -e "\033[32mEnabled: every day at ${entry##*KST=} KST\033[0m"
-    echo "  Cron: $entry"
+    while IFS= read -r line; do
+      echo -e "\033[32mEnabled: every day at ${line##*KST=} KST\033[0m"
+      echo "  Cron: $line"
+    done <<< "$entry"
   else
     echo -e "\033[33mDisabled\033[0m"
   fi
@@ -95,7 +106,7 @@ cmd_run() {
 }
 
 case "${1:-}" in
-  on) cmd_on "${2:-}" ;;
+  on) cmd_on "${@:2}" ;;
   off) cmd_off ;;
   status) cmd_status ;;
   run) cmd_run ;;
