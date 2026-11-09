@@ -57,3 +57,33 @@ claude-cron --help
 ```bash
 alias claude-cron='~/scripts/claude-cron.sh'
 ```
+
+### mount-ssh.sh / umount-ssh.sh
+
+`~/.ssh/config`에 등록된 호스트의 원격 홈 디렉토리를 sshfs로 마운트/언마운트하는 스크립트. 접속 정보(주소, 계정, 키)는 모두 `~/.ssh/config`에서 가져옵니다.
+
+**사용법:**
+
+```bash
+mount-ssh <host>     # 마운트 (이미 마운트돼 있으면 건너뜀)
+umount-ssh <host>    # 언마운트 + 링크 삭제
+```
+
+| 항목 | 위치 |
+|---|---|
+| 마운트 위치 | `/Volumes/ssh-<host>` |
+| 홈 바로가기 | `~/ssh-<host>` (심볼릭 링크) |
+| 로그 | `~/Library/Logs/sshfs-<host>.log` |
+
+**요구사항:**
+
+- macOS 26 이상, macFUSE 5 이상 (`brew install --cask macfuse`), sshfs (`brew install gromgit/fuse/sshfs-mac`)
+- 시스템 설정 → 일반 → 로그인 항목 및 확장 프로그램 → 파일 시스템 확장 프로그램에서 macFUSE 켜기
+- 커널 확장 없이 FSKit 백엔드(`-o backend=fskit`)로 동작하므로 보안 수준을 낮출 필요가 없습니다.
+
+**alias 설정:**
+
+```bash
+alias mount-ssh='~/scripts/mount-ssh.sh'
+alias umount-ssh='~/scripts/umount-ssh.sh'
+```
