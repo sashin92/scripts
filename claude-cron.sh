@@ -4,7 +4,7 @@ set -e
 
 PROMPT="Hi. Reply with OK only."
 MODEL="haiku"
-DEFAULT_TIMES=("06:00" "11:05") # KST
+DEFAULT_TIMES=("07:00" "12:05") # KST
 MARKER="# claude-cron"
 SCRIPT="$(readlink -f "$0")"
 LOG_FILE="$HOME/.local/state/claude-cron/claude-cron.log"
@@ -25,7 +25,7 @@ Commands:
   -h, --help   Show this help
 
 Examples:
-  $(basename "$0") on          # every day at 06:00 and 11:05 KST
+  $(basename "$0") on          # every day at 07:00 and 12:05 KST
   $(basename "$0") on 06:30    # every day at 06:30 KST
   $(basename "$0") on 06:00 11:05
   $(basename "$0") off
